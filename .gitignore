@@ -1,4 +1,10 @@
+# Ignore virtual environments
+.venv/
+
+# Ignore IDE configuration files
 .idea/
+
+# Ignore data folders
 data_of_grids/
 data_of_initial_configurations/
 grid_screenshots/
