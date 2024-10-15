@@ -346,7 +346,7 @@ with open(file_path, 'w') as data:
                 neighbors = get_neighbors(cell)
                 type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)  # CD = COLOR_D
-                color = (255 - COLOR_D * type2, 127 + 20 * (type1 + type2), COLOR_D * type1)  # CD * type2 + CD * type1
+                color = (255 - COLOR_D * type2, 255 / 2 + 20 * (type1 + type2), COLOR_D * type1)  # CD * type2 + CD * type1
             draw_hexagon(screen, color, (x, y))
 
         if show_borderline:
