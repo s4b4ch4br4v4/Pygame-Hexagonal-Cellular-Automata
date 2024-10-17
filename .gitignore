@@ -8,3 +8,9 @@
 data_of_grids/
 data_of_initial_configurations/
 grid_screenshots/
+borderline_length/
+informational_wave/
+untouched_cells/
+
+# Ignore other python files
+main_test/

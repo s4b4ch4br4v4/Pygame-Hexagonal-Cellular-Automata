@@ -26,8 +26,9 @@ LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-10-15_22-
 # Настройки экрана
 WIDTH, HEIGHT = 1800, 1400
 FPS = 30
-CELL_RADIUS = 12.5
-radius = 15
+CELL_RADIUS = 15
+radius = 3
+
 COLOR_D = 40
 
 # Цвета
@@ -37,6 +38,13 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+
+# Определите цвета для каждого состояния
+colors = {
+    0: GRAY,
+    1: BLUE,
+    2: RED
+}
 
 # Счётчики
 turn_count = 0
@@ -229,6 +237,47 @@ def check_for_death():
         single_turn_mode = True
 
 
+def get_informational_wave():
+    global state
+
+    informational_cells = []
+
+    for cell in grid:
+        get_state = state[cell]
+        get_color = colors.get(get_state, GRAY)
+        if get_color == GRAY:
+            neighbors = get_neighbors(cell)
+            type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
+            type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
+            if type1 != 0 or type2 != 0:
+                print(cell)
+                informational_cells.append(cell)
+
+    return informational_cells
+
+
+def get_alive_cells():
+    global state
+    alive_cells = []
+    for cell in grid:
+        if state[cell] != 0:
+            alive_cells.append(cell)
+    return alive_cells
+
+
+def get_untouched_cells():
+    global state
+    global grid
+
+    untouched_cells = []
+
+    for cell in state:
+        if state[cell] == 0 and cell not in get_informational_wave():
+            untouched_cells.append(cell)
+
+    return untouched_cells
+
+
 def save_configuration(folder_path):
     filename = f"initial_configuration_{current_date}.txt"
     file_path = os.path.join(folder_path, filename)
@@ -276,34 +325,31 @@ def save_screenshot(screen, turn_count, screenshot_folder):
     pygame.image.save(screen, file_path)
 
 
-def saving_borderline_coordinates(coordinates_folder):
-    borderline = borderline_cells()
-
-    coordinates_folder_path = f"borderline_coordinates_folder_{current_date}"
-    full_path = os.path.join(coordinates_folder, coordinates_folder_path)
-    os.makedirs(full_path, exist_ok=True)
-
-    file_path = os.path.join(full_path, f"borderline_coordinates_{turn_count}.txt")
-
-    with open(file_path, 'w') as file:
-        for cell in borderline:
-            q, r = cell
-            file.write(f"{q},{r}\n")
-
-
 def saving_borderline_length(file_path):
-    borderline = borderline_cells()
-
     with open(file_path, "a") as file:
-        file.write(f"{turn_count}, {len(borderline)}\n")
+        file.write(f"{turn_count}, {len(borderline_cells())}\n")
+
+
+def saving_informational_wave(file_path):
+    with open(file_path, "a") as file:
+        file.write(f"{turn_count}, {len(get_informational_wave())}\n")
+
+
+def saving_untouched_cells(file_path):
+    with open(file_path, "a") as file:
+        file.write(f"{turn_count}, {len(get_untouched_cells())}\n")
 
 
 # Пути к папкам
 folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
-borderline_coordinates = "borderline_coordinates"
 borderline_len = "borderline_length"
+info_wave_folder = "informational_wave"
+untouched_cells_folder = "untouched_cells"
+
+info_wave_file = os.path.join(info_wave_folder, f"informational_wave_{current_date}.txt")
 borderline_len_file = os.path.join(borderline_len, f"borderline_length_{current_date}.txt")
+untouched_cells_file = os.path.join(untouched_cells_folder, f"untouched_cells_{current_date}.txt")
 
 file_path = os.path.join(folder_path, f"data_{current_date}.csv")
 
@@ -336,6 +382,7 @@ with open(file_path, 'w') as data:
                     x, y = hex_to_pixel(*cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         state[cell] = (state[cell] + 1) % 3  # Переключение состояния циклически. % на кол. состояний!
+                        # print(cell)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     simulation_started = True
@@ -356,13 +403,6 @@ with open(file_path, 'w') as data:
                     pygame.quit()
                     sys.exit()
 
-        # Определите цвета для каждого состояния
-        colors = {
-            0: GRAY,
-            1: BLUE,
-            2: RED
-        }
-
         for cell in grid:
             x, y = hex_to_pixel(*cell)
             state_value = state[cell]
@@ -372,15 +412,11 @@ with open(file_path, 'w') as data:
                 type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
                 color = (255 - COLOR_D * type2, 255 / 2 + 20 * (type1 + type2), COLOR_D * type1)
-                # CD = COLOR_D
-                # CD * type2 + CD * type1
+                # CD = COLOR_D, CD * type2 + CD * type1
             draw_hexagon(screen, color, (x, y))
 
         if show_borderline:
             update_borderline_color()
-
-        saving_borderline_coordinates(borderline_coordinates)
-        saving_borderline_length(borderline_len_file)
 
         # Обновление состояния только при запущенной симуляции
         if simulation_started or single_turn_mode:
@@ -390,6 +426,10 @@ with open(file_path, 'w') as data:
             turn_count += 1
 
             check_for_death()
+
+            saving_borderline_length(borderline_len_file)
+            saving_informational_wave(info_wave_file)
+            saving_untouched_cells(untouched_cells_file)
 
             if single_turn_mode:
                 single_turn_mode = False
