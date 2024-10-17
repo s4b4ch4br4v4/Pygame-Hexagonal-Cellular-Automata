@@ -17,8 +17,6 @@ import os
     CTRL + l - დამახსოვრებული კონფიგურაციის მითითების შემდეგ(LOAD_PATH) მისი ატვირთვის საშუალებას გვაძლევს
 
     h - ამ ღილაკით შეიძლება დამალო/გამოაჩინო ეგ შავი საზღვარი
-    
-    123
 """
 
 # Настройки конфигурации:
@@ -179,7 +177,7 @@ def update_borderline_color():
         draw_hexagon(screen, BLACK, (q, r))
 
 
-# [L]inear Int[erp]olation (Lerp) functions:
+# Linear Interpolation (Lerp) functions:
 
 def diagonal_distance(start_cell, end_cell):
     dq, dr = start_cell[0] - end_cell[0], start_cell[1] - end_cell[1]
@@ -247,9 +245,8 @@ def save_configuration(folder_path):
 
 
 def load_configuration(file_path):
-    global state  # Используем глобальную переменную state
+    global state
 
-    # Считываем содержимое файла
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
@@ -269,21 +266,47 @@ def load_configuration(file_path):
 
 
 def save_screenshot(screen, turn_count, screenshot_folder):
-    # Убедиться, что папка существует
     screenshot_folder_path = f"screenshot_folder_{current_date}"
     full_path = os.path.join(screenshot_folder, screenshot_folder_path)
+
     os.makedirs(full_path, exist_ok=True)  # Создаем папку, если она не существует
 
-    # Создаем путь к файлу для сохранения скриншота
     file_path = os.path.join(full_path, f"screenshot_{turn_count}.png")
+
     pygame.image.save(screen, file_path)
 
 
-# Путь к папкам данных и скриншотов
+def saving_borderline_coordinates(coordinates_folder):
+    borderline = borderline_cells()
+
+    coordinates_folder_path = f"borderline_coordinates_folder_{current_date}"
+    full_path = os.path.join(coordinates_folder, coordinates_folder_path)
+    os.makedirs(full_path, exist_ok=True)
+
+    file_path = os.path.join(full_path, f"borderline_coordinates_{turn_count}.txt")
+
+    with open(file_path, 'w') as file:
+        for cell in borderline:
+            q, r = cell
+            file.write(f"{q},{r}\n")
+
+
+def saving_borderline_length(file_path):
+    borderline = borderline_cells()
+
+    with open(file_path, "a") as file:
+        file.write(f"{turn_count}, {len(borderline)}\n")
+
+
+# Пути к папкам
 folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
+borderline_coordinates = "borderline_coordinates"
+borderline_len = "borderline_length"
+borderline_len_file = os.path.join(borderline_len, f"borderline_length_{current_date}.txt")
 
 file_path = os.path.join(folder_path, f"data_{current_date}.csv")
+
 screenshot_interval = 1  # Интервал для сохранения скриншотов
 
 os.makedirs(folder_path, exist_ok=True)
@@ -335,9 +358,9 @@ with open(file_path, 'w') as data:
 
         # Определите цвета для каждого состояния
         colors = {
-            0: GRAY,  # Состояние 0
-            1: BLUE,  # Состояние 1
-            2: RED  # Состояние 2
+            0: GRAY,
+            1: BLUE,
+            2: RED
         }
 
         for cell in grid:
@@ -348,11 +371,15 @@ with open(file_path, 'w') as data:
                 neighbors = get_neighbors(cell)
                 type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)  # CD = COLOR_D
-                color = (255 - COLOR_D * type2, 255 / 2 + 20 * (type1 + type2), COLOR_D * type1)  # CD * type2 + CD * type1
+                color = (
+                255 - COLOR_D * type2, 255 / 2 + 20 * (type1 + type2), COLOR_D * type1)  # CD * type2 + CD * type1
             draw_hexagon(screen, color, (x, y))
 
         if show_borderline:
             update_borderline_color()
+
+        saving_borderline_coordinates(borderline_coordinates)
+        saving_borderline_length(borderline_len_file)
 
         # Обновление состояния только при запущенной симуляции
         if simulation_started or single_turn_mode:
