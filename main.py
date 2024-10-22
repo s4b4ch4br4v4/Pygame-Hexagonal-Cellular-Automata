@@ -26,9 +26,10 @@ LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-10-15_22-
 # Настройки экрана
 WIDTH, HEIGHT = 1800, 1400
 FPS = 30
-CELL_RADIUS = 5
-radius = 50
+CELL_RADIUS = 30
+radius = 3
 
+# Дифференциал цвета
 COLOR_D = 40
 
 # Цвета
@@ -36,8 +37,10 @@ WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
 
 # Определите цвета для каждого состояния
 colors = {
@@ -60,11 +63,19 @@ show_borderline = True
 
 # Клетки информационные и нетронутые
 informational_wave_cells = []
+blue_info_wave = []
+red_info_wave = []
 untouched_cells = []
+
 info_wave_len = []
 untouched_cells_len = []
 
-# Дата
+# Клетки границы:
+cyan_borderline_cells = set()
+yellow_borderline_cells = set()
+black_borderline_cells = set()
+
+# Текущая дата
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 # Инициализация Pygame
@@ -88,12 +99,14 @@ def generate_hex_grid(radius):
     return grid
 
 
+# Конвертация в пиксельные координаты монитора
 def hex_to_pixel(q, r):
     x = CELL_RADIUS * (3 / 2 * q)
     y = CELL_RADIUS * (m.sqrt(3) * (r + q / 2))
     return int(x + WIDTH // 2), int(y + HEIGHT // 2)
 
 
+# Рисование шестиугольника
 def draw_hexagon(surface, color, pos):
     x, y = pos
     points = []
@@ -106,6 +119,7 @@ def draw_hexagon(surface, color, pos):
     pygame.draw.polygon(surface, GRAY, points, 1)
 
 
+# Вычисление соседей
 def get_neighbors(cell):
     q, r = cell
     directions = [
@@ -119,6 +133,7 @@ grid = generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
 
 
+# Условия среды
 def update_state():
     global state
     global first_count
@@ -164,6 +179,7 @@ def update_state():
     state = new_state  # Apply the new state
 
 
+# Вычисление граничных клеток
 def borderline_cells():
     borderline = []
     for cell in grid:
@@ -172,25 +188,43 @@ def borderline_cells():
         type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
         dead_neighbors = sum(state.get(neighbor, 0) == 0 for neighbor in neighbors)
 
-        # If cell is dead and has at least one of each type around it
-        if state[cell] == 0 and type1_neighbors > 0 and type2_neighbors > 0:
+        if state[cell] == 0 and type1_neighbors * type2_neighbors * dead_neighbors != 0:
             borderline.append(cell)
-        # If cell is type 1 or 2 and has both other types as neighbors
-        elif (state[cell] == 1 and type2_neighbors > 0 and dead_neighbors > 0) or (
-                state[cell] == 2 and type1_neighbors > 0 and dead_neighbors > 0):
+        elif state[cell] == 1 and type1_neighbors * type2_neighbors * dead_neighbors != 0:
+            borderline.append(cell)
+        elif state[cell] == 2 and type1_neighbors * type2_neighbors * dead_neighbors != 0:
             borderline.append(cell)
 
     return borderline
 
 
+# Измененеие их цвета а так же добывает определённые типы граничных клеток
 def update_borderline_color():
+    cyan_borderline_cells.clear()
+    yellow_borderline_cells.clear()
+    black_borderline_cells.clear()
+
     borderline = borderline_cells()
     for cell in borderline:
+        neighbors = get_neighbors(cell)
+
+        type1_neighbors = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
+        type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
+
         q, r = hex_to_pixel(*cell)
 
-        draw_hexagon(screen, BLACK, (q, r))
+        if type1_neighbors > type2_neighbors:
+            cyan_borderline_cells.add(cell)
+            draw_hexagon(screen, CYAN, (q, r))
+        elif type1_neighbors < type2_neighbors:
+            yellow_borderline_cells.add(cell)
+            draw_hexagon(screen, YELLOW, (q, r))
+        else:
+            black_borderline_cells.add(cell)
+            draw_hexagon(screen, BLACK, (q, r))
 
 
+# Поверка на смерть типа клеток чтобы остановить симуляцию
 def check_for_death():
     global state
     global single_turn_mode
@@ -202,6 +236,7 @@ def check_for_death():
         single_turn_mode = True
 
 
+# Сохраняет позиции клеток в файл которые после можно установить как начальная конфигурация
 def save_configuration(folder_path):
     filename = f"initial_configuration_{current_date}.txt"
     file_path = os.path.join(folder_path, filename)
@@ -217,6 +252,7 @@ def save_configuration(folder_path):
                 file.write(f"{state_value}\n")  # Сохраняем значение состояния (0 или 1)
 
 
+# Установка начальной конфигурации
 def load_configuration(file_path):
     global state
 
@@ -238,6 +274,7 @@ def load_configuration(file_path):
         state[(q, r)] = state_value
 
 
+# Каждый шаг делает скриншот
 def save_screenshot(screen, turn_count, screenshot_folder):
     screenshot_folder_path = f"screenshot_folder_{current_date}"
     full_path = os.path.join(screenshot_folder, screenshot_folder_path)
@@ -249,32 +286,9 @@ def save_screenshot(screen, turn_count, screenshot_folder):
     pygame.image.save(screen, file_path)
 
 
-def save_informational_wave(file_path):
-    with open(file_path, "a") as file:
-        print(info_wave_len[0])
-        turn = 1
-        for length in info_wave_len:
-            file.write(f"{turn}, {length}\n")
-            turn += 1
-
-
-def save_untouched_cells(file_path):
-    with open(file_path, "a") as file:
-        print(untouched_cells_len[0])
-        turn = 1
-        for length in untouched_cells_len:
-            file.write(f"{turn}, {length}\n")
-            turn += 1
-
-
 # Пути к папкам
 folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
-info_wave_folder = "informational_wave"
-untouched_cells_folder = "untouched_cells"
-
-info_wave_file = os.path.join(info_wave_folder, f"informational_wave_{current_date}.txt")
-untouched_cells_file = os.path.join(untouched_cells_folder, f"untouched_cells_{current_date}.txt")
 
 file_path = os.path.join(folder_path, f"data_{current_date}.csv")
 
@@ -287,7 +301,7 @@ os.makedirs(screenshot_folder, exist_ok=True)
 with open(file_path, 'w') as data:
     # Основной игровой цикл
     data.write(
-        f"turn_count; active_cells_count; dead_cells_count; first_count; second_count; density; density1; density2; borderline_cells_count;\n")
+        f"turn_count; active_cells_count; dead_cells_count; first_count; second_count; density; density1; density2; borderline_cells_count; borderline_cyan; borderline_yellow; borderline_black; info_wave; blue_info_wave; red_info_wave; untouched_cells_count;\n")
     running = True
     simulation_started = False
     record_interval = 1  # Интервал записи данных (1 шаг)
@@ -324,10 +338,12 @@ with open(file_path, 'w') as data:
                 if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
                     load_configuration(LOAD_PATH)
                 if event.key == pygame.K_ESCAPE:
-                    save_informational_wave(info_wave_file)
-                    save_untouched_cells(untouched_cells_file)
                     pygame.quit()
                     sys.exit()
+
+        informational_wave_cells.clear()
+        blue_info_wave.clear()
+        red_info_wave.clear()
 
         for cell in grid:
             x, y = hex_to_pixel(*cell)
@@ -340,14 +356,15 @@ with open(file_path, 'w') as data:
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
                 color = (255 - COLOR_D * type2, 255 / 2 + 20 * (type1 + type2), COLOR_D * type1)
                 # CD = COLOR_D, CD * type2 + CD * type1
+                if type1 != 0:
+                    blue_info_wave.append(cell)
+                if type2 != 0:
+                    red_info_wave.append(cell)
                 if type1 != 0 or type2 != 0:
                     informational_wave_cells.append(cell)
             if state_value == 0 and cell not in informational_wave_cells:
                 untouched_cells.append(cell)
             draw_hexagon(screen, color, (x, y))
-
-        if show_borderline:
-            update_borderline_color()
 
         # Обновление состояния только при запущенной симуляции
         if simulation_started or single_turn_mode:
@@ -356,8 +373,12 @@ with open(file_path, 'w') as data:
             update_state()
             turn_count += 1
 
+            if show_borderline:
+                update_borderline_color()
+
             info_wave_len.append(len(informational_wave_cells))
             untouched_cells_len.append(len(untouched_cells))
+
             informational_wave_cells.clear()
             untouched_cells.clear()
 
@@ -382,7 +403,7 @@ with open(file_path, 'w') as data:
             density2 = second_count / len(grid)
 
             data.write(
-                f"{turn_count}; {active_cells_count}; {dead_cells_count}; {first_count}; {second_count}; {density}; {density1}; {density2}; {len(borderline_cells())}\n")
+                f"{turn_count}; {active_cells_count}; {dead_cells_count}; {first_count}; {second_count}; {density}; {density1}; {density2}; {len(borderline_cells())}; {len(cyan_borderline_cells)}; {len(yellow_borderline_cells)}; {len(black_borderline_cells)}; {len(informational_wave_cells)}; {len(blue_info_wave)}; {len(red_info_wave)}; {untouched_cells_len[turn_count-1]};\n")
 
             # Запись данных в текстовый файл каждые record_interval шагов
             if turn_count >= next_record_turn:
