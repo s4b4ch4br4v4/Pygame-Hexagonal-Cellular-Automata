@@ -21,13 +21,13 @@ import os
 
 # Настройки конфигурации:
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-10-15_22-13-39.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-10-23_14-40-11.txt"
 
 # Настройки экрана
 WIDTH, HEIGHT = 1800, 1400
 FPS = 30
-CELL_RADIUS = 30
-radius = 3
+CELL_RADIUS = 5
+radius = 50
 
 # Дифференциал цвета
 COLOR_D = 40
@@ -35,6 +35,7 @@ COLOR_D = 40
 # Цвета
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
+DARK_GRAY = (100, 100, 100)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
@@ -46,7 +47,8 @@ CYAN = (0, 255, 255)
 colors = {
     0: GRAY,
     1: BLUE,
-    2: RED
+    2: RED,
+    -1: DARK_GRAY
 }
 
 # Счётчики
@@ -142,39 +144,40 @@ def update_state():
     new_state = state.copy()  # Create a copy for updates
 
     for cell in state:
-        neighbors = get_neighbors(cell)
+        if state[cell] != -1:
+            neighbors = get_neighbors(cell)
 
-        # Count neighbors of different states
-        type1_neighbors = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
-        type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
+            # Count neighbors of different states
+            type1_neighbors = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
+            type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
 
-        alive_neighbors = sum(state.get(neighbor, 0) > 0 for neighbor in neighbors)
+            alive_neighbors = sum(state.get(neighbor, 0) > 0 for neighbor in neighbors)
 
-        current_state = state[cell]
-        new_state[cell] = 0  # Dies
+            current_state = state[cell]
+            new_state[cell] = 0  # Dies
 
-        if current_state == 0 and type1_neighbors * type2_neighbors != 0:
-            if type1_neighbors > type2_neighbors:
-                new_state[cell] = 1
+            if current_state == 0 and type1_neighbors * type2_neighbors != 0:
+                if type1_neighbors > type2_neighbors:
+                    new_state[cell] = 1
+                    first_count = first_count + 1
+                if type1_neighbors < type2_neighbors:
+                    new_state[cell] = 2
+                    second_count = second_count + 1
+
+            if current_state == 0 and type1_neighbors * type2_neighbors == 0:
+                if type1_neighbors > type2_neighbors and (type1_neighbors == 2 or type1_neighbors == 3):
+                    new_state[cell] = 1
+                    first_count = first_count + 1
+                if type1_neighbors < type2_neighbors and (type2_neighbors == 2 or type2_neighbors == 3):
+                    new_state[cell] = 2
+                    second_count = second_count + 1
+
+            if current_state == 1 and (type1_neighbors == 2 or type1_neighbors == 3):
+                new_state[cell] = 1  # Become type 1
                 first_count = first_count + 1
-            if type1_neighbors < type2_neighbors:
-                new_state[cell] = 2
+            if current_state == 2 and (type2_neighbors == 2 or type2_neighbors == 3):
+                new_state[cell] = 2  # Become type 2
                 second_count = second_count + 1
-
-        if current_state == 0 and type1_neighbors * type2_neighbors == 0:
-            if type1_neighbors > type2_neighbors and (type1_neighbors == 2 or type1_neighbors == 3):
-                new_state[cell] = 1
-                first_count = first_count + 1
-            if type1_neighbors < type2_neighbors and (type2_neighbors == 2 or type2_neighbors == 3):
-                new_state[cell] = 2
-                second_count = second_count + 1
-
-        if current_state == 1 and (type1_neighbors == 2 or type1_neighbors == 3):
-            new_state[cell] = 1  # Become type 1
-            first_count = first_count + 1
-        if current_state == 2 and (type2_neighbors == 2 or type2_neighbors == 3):
-            new_state[cell] = 2  # Become type 2
-            second_count = second_count + 1
 
     state = new_state  # Apply the new state
 
@@ -246,7 +249,7 @@ def save_configuration(folder_path):
 
     with open(file_path, 'w') as file:
         for cell, state_value in state.items():
-            if state_value == 1 or state_value == 2:  # Сохраняем только живые клетки
+            if state_value == 1 or state_value == 2 or state_value == -1:  # Сохраняем только живые клетки
                 q, r = cell
                 file.write(f"{q},{r}\n")
                 file.write(f"{state_value}\n")  # Сохраняем значение состояния (0 или 1)
@@ -320,7 +323,13 @@ with open(file_path, 'w') as data:
                 for cell in grid:
                     x, y = hex_to_pixel(*cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
-                        state[cell] = (state[cell] + 1) % 3  # Переключение состояния циклически. % на кол. состояний!
+                        if event.button == 1:
+                            state[cell] = (state[cell] + 1) % 3  # Переключение между 0, 1, 2 для обычных клеток
+                        elif event.button == 3:
+                            if state[cell] == -1:
+                                state[cell] = 0
+                            else:
+                                state[cell] = -1
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     simulation_started = True
