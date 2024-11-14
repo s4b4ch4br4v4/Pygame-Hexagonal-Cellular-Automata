@@ -3,6 +3,7 @@ import math as m
 import sys
 import datetime
 import os
+from dataclasses import dataclass
 
 """
 შეტყობინება ბატონი გრიგოლისთვის:
@@ -13,10 +14,12 @@ import os
 
     (ცნობისთვის single_turn_mode ირთვება როცა ერთ-ერთი ცივილიზაცია მაინც კვდება(ასე გავაკეთე მაგის რეალიზაცია))
 
-    CTRL + s - მიმდინარე კონფიგურაციის დამახსოვრება(იმახსოვრებს კონფიგურაციას ტექსტურ ფაილში)
+    CTRL + s - მიმდინარე კონფიგურაციის დამახსოვრება(იმახსოვრებს კონიგურაციას ტექსტურ ფაილში)
     CTRL + l - დამახსოვრებული კონფიგურაციის მითითების შემდეგ(LOAD_PATH) მისი ატვირთვის საშუალებას გვაძლევს
 
-    h - ამ ღილაკით შეიძლება დამალო/გამოაჩინო ეგ შავი საზღვარი
+    h - ამ ღილაკით შეიძლება დამალო/გამოაჩინო საზღვარი
+    
+    new! RMB - მაუსის მარჯვენა ღილაკის დაჭერისას კედლების შენებაა შესაძლებელი
 """
 
 # Настройки конфигурации:
@@ -26,8 +29,8 @@ LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-10-23_14-
 # Настройки экрана
 WIDTH, HEIGHT = 1800, 1400
 FPS = 30
-CELL_RADIUS = 5
-radius = 50
+CELL_RADIUS = 1
+radius = 150
 
 # Дифференциал цвета
 COLOR_D = 40
@@ -45,18 +48,19 @@ CYAN = (0, 255, 255)
 
 # Определите цвета для каждого состояния
 colors = {
+    -1: DARK_GRAY,
     0: GRAY,
     1: BLUE,
     2: RED,
-    -1: DARK_GRAY
+    3: GREEN
 }
 
 # Счётчики
 turn_count = 0
 active_cells_count = 0
+dead_cells_count = 0
 first_count = 0
 second_count = 0
-dead_cells_count = 0
 density = 0
 
 # Модификации
@@ -86,10 +90,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 font = pygame.font.SysFont('Arial', 24)
 
-# Вычисление расстояний между шестиугольниками
-dx = 3 / 2 * CELL_RADIUS
-dy = m.sqrt(3) * CELL_RADIUS
-
 
 # Генерация шестиугольной сетки
 def generate_hex_grid(radius):
@@ -118,7 +118,7 @@ def draw_hexagon(surface, color, pos):
         point_y = y + CELL_RADIUS * m.sin(angle)
         points.append((point_x, point_y))
     pygame.draw.polygon(surface, color, points)
-    pygame.draw.polygon(surface, GRAY, points, 1)
+    # pygame.draw.polygon(surface, GRAY, points, 1)
 
 
 # Вычисление соседей
@@ -143,8 +143,8 @@ def update_state():
 
     new_state = state.copy()  # Create a copy for updates
 
-    for cell in state:
-        if state[cell] != -1:
+    for cell in new_state:
+        if new_state[cell] != -1:
             neighbors = get_neighbors(cell)
 
             # Count neighbors of different states
@@ -304,7 +304,13 @@ os.makedirs(screenshot_folder, exist_ok=True)
 with open(file_path, 'w') as data:
     # Основной игровой цикл
     data.write(
-        f"turn_count; active_cells_count; dead_cells_count; first_count; second_count; density; density1; density2; borderline_cells_count; borderline_cyan; borderline_yellow; borderline_black; info_wave; blue_info_wave; red_info_wave; untouched_cells_count;\n")
+        f"turn_count; "
+        f"active_cells_count; dead_cells_count; "
+        f"first_count; second_count; "
+        f"density; density1; density2; "
+        f"borderline_cells_count; borderline_cyan; borderline_yellow; borderline_black; "
+        f"info_wave; blue_info_wave; red_info_wave; "
+        f"untouched_cells_count;\n")
     running = True
     simulation_started = False
     record_interval = 1  # Интервал записи данных (1 шаг)
@@ -325,6 +331,7 @@ with open(file_path, 'w') as data:
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         if event.button == 1:
                             state[cell] = (state[cell] + 1) % 3  # Переключение между 0, 1, 2 для обычных клеток
+                            print(cell)
                         elif event.button == 3:
                             if state[cell] == -1:
                                 state[cell] = 0
@@ -412,7 +419,13 @@ with open(file_path, 'w') as data:
             density2 = second_count / len(grid)
 
             data.write(
-                f"{turn_count}; {active_cells_count}; {dead_cells_count}; {first_count}; {second_count}; {density}; {density1}; {density2}; {len(borderline_cells())}; {len(cyan_borderline_cells)}; {len(yellow_borderline_cells)}; {len(black_borderline_cells)}; {len(informational_wave_cells)}; {len(blue_info_wave)}; {len(red_info_wave)}; {untouched_cells_len[turn_count-1]};\n")
+                f"{turn_count}; "
+                f"{active_cells_count}; {dead_cells_count}; "
+                f"{first_count}; {second_count}; "
+                f"{density}; {density1}; {density2}; "
+                f"{len(borderline_cells())}; {len(cyan_borderline_cells)}; {len(yellow_borderline_cells)}; {len(black_borderline_cells)}; "
+                f"{len(informational_wave_cells)}; {len(blue_info_wave)}; {len(red_info_wave)}; "
+                f"{untouched_cells_len[turn_count - 1]};\n")
 
             # Запись данных в текстовый файл каждые record_interval шагов
             if turn_count >= next_record_turn:
