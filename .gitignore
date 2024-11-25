@@ -3,6 +3,7 @@
 
 # Ignore IDE configuration files
 .idea/
+__pycache__/
 
 # Ignore data folders
 data_of_grids/
@@ -16,3 +17,6 @@ untouched_cells/
 main_test/
 Cell/
 Grid/
+
+# Ignore the ideas
+unfinished ideas/
