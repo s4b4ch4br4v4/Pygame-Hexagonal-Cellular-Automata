@@ -10,7 +10,7 @@ def save_configuration(folder_path, current_date, state):
 
     with open(file_path, 'w') as file:
         for cell, state_value in state.items():
-            if state_value == 1 or state_value == 2 or state_value == -1:
+            if state_value == 1 or state_value == 2 or state_value == 3 or state_value == -1:
                 q, r = cell
                 file.write(f"{q},{r}\n")
                 file.write(f"{state_value}\n")

@@ -13,7 +13,6 @@ class Grid_Colors:
     RED = (255, 0, 0)
     YELLOW = (255, 255, 0)
     GREEN = (0, 255, 0)
-    SALAT = (125, 255, 125)
     BLUE = (0, 0, 255)
     CYAN = (0, 255, 255)
 

@@ -20,8 +20,8 @@ font = pygame.font.SysFont('Arial', 24)
 
 # Simulation variables:
 
-CELL_RADIUS = 20
-radius = 10
+CELL_RADIUS = 1
+radius = 150
 
 grid = gu.generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
@@ -40,7 +40,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-11-25_16-06-33.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-06_01-18-50.txt"
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -58,10 +58,10 @@ with open(full_data_file_path, 'w') as data:
     data.write(
         f"turn_count; "
         f"active_cells_count; dead_cells_count; "
-        f"first_count; second_count; "
-        f"density; density1; density2; "
-        f"borderline_cells_count; borderline_cyan; borderline_yellow; borderline_black; "
-        f"info_wave; blue_info_wave; red_info_wave; "
+        f"first_count; second_count; third_count; "
+        f"density; density1; density2; density3; "
+        f"borderline_cells_count; borderline_cyan; borderline_yellow; borderline_white; borderline_black; "
+        f"info_wave; blue_info_wave; red_info_wave; borderline_white; "
         f"untouched_cells_count; \n")
 
     running = True
@@ -79,7 +79,7 @@ with open(full_data_file_path, 'w') as data:
                     x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         if event.button == 1:
-                            state[cell] = (state[cell] + 1) % 3
+                            state[cell] = (state[cell] + 1) % 4
                         elif event.button == 3:
                             if state[cell] == -1:
                                 state[cell] = 0
@@ -108,6 +108,7 @@ with open(full_data_file_path, 'w') as data:
         IW.informational_wave_cells.clear()
         IW.blue_info_wave.clear()
         IW.red_info_wave.clear()
+        IW.white_info_wave.clear()
 
         for cell in grid:
             x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
@@ -117,12 +118,15 @@ with open(full_data_file_path, 'w') as data:
                 neighbors = gu.get_neighbors(cell)
                 type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
-                color = (255 - GC.COLOR_D * type2, 255/2 + 20 * (type1+type2), GC.COLOR_D * type1)
+                type3 = sum(state.get(neighbor, 0) == 3 for neighbor in neighbors)
+                color = (255/2 + 20 * type2, 255/2 + 20 * type3, 255/2 + 20 * type1)
                 if type1 != 0:
                     IW.blue_info_wave.append(cell)
                 if type2 != 0:
                     IW.red_info_wave.append(cell)
-                if type1 != 0 or type2 != 0:
+                if type3 != 0:
+                    IW.white_info_wave.append(cell)
+                if type1 != 0 or type2 != 0 or type3 != 0:
                     IW.informational_wave_cells.append(cell)
             if state_value == 0 and cell not in IW.informational_wave_cells:
                 IW.untouched_cells.append(cell)
@@ -131,11 +135,9 @@ with open(full_data_file_path, 'w') as data:
         if simulation_started or single_turn_mode:
             C.first_count = 0
             C.second_count = 0
+            C.third_count = 0
             su.update_state(state, C)
-            if C.turn_count <= 50:
-                C.turn_count += 1
-            else:
-                simulation_started = False
+            C.turn_count += 1
 
             if show_borderline:
                 su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
@@ -146,40 +148,45 @@ with open(full_data_file_path, 'w') as data:
             IW.informational_wave_cells.clear()
             IW.untouched_cells.clear()
 
-            single_turn_mode = su.check_for_death(state)
-
             if single_turn_mode:
                 single_turn_mode = False
                 simulation_started = False
 
+            single_turn_mode = su.check_for_death(state)
+
             if C.turn_count % screenshot_interval == 0:
                 fsu.save_screenshot(screenshot_folder, C, current_date, screen)
 
-            C.active_cells_count = C.first_count + C.second_count
+            C.active_cells_count = C.first_count + C.second_count + C.third_count
             C.dead_cells_count = len(grid) - C.active_cells_count
 
             C.density = C.active_cells_count / len(grid)
 
             density1 = C.first_count / len(grid)
             density2 = C.second_count / len(grid)
+            density3 = C.third_count / len(grid)
 
             data.write(
                 f"{C.turn_count}; "
                 f"{C.active_cells_count}; {C.dead_cells_count}; "
-                f"{C.first_count}; {C.second_count}; "
-                f"{C.density}; {density1}; {density2}; "
+                f"{C.first_count}; {C.second_count}; {C.third_count}; "
+                f"{C.density}; {density1}; {density2}; {density3}; "
                 f"{len(su.borderline_cells(grid, state))}; "
                 f"{len(BC.cyan_borderline_cells)}; "
                 f"{len(BC.yellow_borderline_cells)}; "
+                f"{len(BC.white_borderline_cells)}; "
                 f"{len(BC.black_borderline_cells)}; "
-                f"{len(IW.informational_wave_cells)}; {len(IW.blue_info_wave)}; {len(IW.red_info_wave)}; "
+                f"{IW.info_wave_len[C.turn_count - 1]}; "
+                f"{len(IW.blue_info_wave)}; {len(IW.red_info_wave)}; {len(IW.white_info_wave)};"
                 f"{IW.untouched_cells_len[C.turn_count - 1]}; \n")
 
         info_text = (
             f"Turns: {C.turn_count}  |  "
-            f"Active Cells: {C.active_cells_count}  -  {C.first_count}  -  {C.second_count}  |  "  
+            f"Active Cells: {C.active_cells_count}  -  "
+            f"{C.first_count}  -  {C.second_count}  -  {C.third_count}  |  "  
             f"Dead Cells: {C.dead_cells_count}  |  "
-            f"Density: {C.density}  -  {C.first_count / len(grid)}  -  {C.second_count / len(grid)}")
+            f"Density: {C.density}  -  "
+            f"  {C.first_count / len(grid)}  -  {C.second_count / len(grid)}  -  {C.third_count / len(grid)}")
         info_surface = font.render(info_text, True, GC.BLACK)
 
         text_width, text_height = info_surface.get_size()
