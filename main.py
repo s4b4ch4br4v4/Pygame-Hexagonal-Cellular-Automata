@@ -20,8 +20,8 @@ font = pygame.font.SysFont('Arial', 24)
 
 # Simulation variables:
 
-CELL_RADIUS = 1
-radius = 150
+CELL_RADIUS = 20
+radius = 10
 
 grid = gu.generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
@@ -40,7 +40,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-06_01-18-50.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-13_17-38-51.txt"
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -132,15 +132,15 @@ with open(full_data_file_path, 'w') as data:
                 IW.untouched_cells.append(cell)
             gu.draw_hexagon(CELL_RADIUS, screen, color, (x, y))
 
+        if show_borderline:
+            su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
+
         if simulation_started or single_turn_mode:
             C.first_count = 0
             C.second_count = 0
             C.third_count = 0
             su.update_state(state, C)
             C.turn_count += 1
-
-            if show_borderline:
-                su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
 
             IW.info_wave_len.append(len(IW.informational_wave_cells))
             IW.untouched_cells_len.append(len(IW.untouched_cells))
