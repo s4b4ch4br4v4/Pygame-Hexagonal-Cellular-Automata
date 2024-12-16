@@ -20,14 +20,15 @@ font = pygame.font.SysFont('Arial', 24)
 
 # Simulation variables:
 
-CELL_RADIUS = 20
-radius = 10
+CELL_RADIUS = 5
+radius = 50
 
 grid = gu.generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
 
 single_turn_mode = False
-show_borderline = True
+show_borderline = False
+hex_click_mode = False
 
 C = su.Counters()
 IW = su.InformationalWave()
@@ -40,7 +41,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-13_17-38-51.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-16_18-25-13.txt"
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -80,7 +81,9 @@ with open(full_data_file_path, 'w') as data:
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         if event.button == 1:
                             state[cell] = (state[cell] + 1) % 4
-                        elif event.button == 3:
+                        if event.button == 1 and hex_click_mode:
+                            su.color_neighborhood(state, cell)
+                        if event.button == 3:
                             if state[cell] == -1:
                                 state[cell] = 0
                             else:
@@ -88,8 +91,11 @@ with open(full_data_file_path, 'w') as data:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     simulation_started = True
+                    show_borderline = True
                 if event.key == pygame.K_p:
                     single_turn_mode = True
+                if event.key == pygame.K_o:
+                    hex_click_mode = not hex_click_mode
                 if event.key == pygame.K_h:
                     show_borderline = not show_borderline
                 if event.key == pygame.K_r:
@@ -140,6 +146,7 @@ with open(full_data_file_path, 'w') as data:
             C.second_count = 0
             C.third_count = 0
             su.update_state(state, C)
+            su.clear_edges(state, su.precompute_edges(radius))
             C.turn_count += 1
 
             IW.info_wave_len.append(len(IW.informational_wave_cells))

@@ -66,33 +66,33 @@ def update_state(state, counters):
             current_state = state[cell]
 
             neighbor_counts = [type1_neighbors, type2_neighbors, type3_neighbors]
-            max_count = max(neighbor_counts)
-            max_types = [i + 1 for i, count in enumerate(neighbor_counts) if count == max_count]
 
-            if len(max_types) > 1:
-                max_type = current_state
-            else:
-                max_type = max_types[0]
+            if current_state == 0:
+                if type1_neighbors == type2_neighbors == type3_neighbors:
+                    new_state[cell] = 0
 
-            # If neighborhood includes all types, the inactive changes its type to match the most common one.
-            if current_state == 0 and neighborhood != 0:
-                new_state[cell] = max_type
-            # If neighborhood includes at least two types, the inactive changes its type to match the most common one.
-            elif current_state == 0 and neighborhood == 0 and max_count in (2, 3):
-                new_state[cell] = max_type
-                update_counters(counters, max_type)
+                if (type1_neighbors > type3_neighbors) and (type1_neighbors in [2, 3]):
+                    new_state[cell] = 1
+                    update_counters(counters, 1)
+
+                if (type2_neighbors > type1_neighbors) and (type2_neighbors in [2, 3]):
+                    new_state[cell] = 2
+                    update_counters(counters, 2)
+
+                if (type3_neighbors > type2_neighbors) and (type3_neighbors in [2, 3]):
+                    new_state[cell] = 3
+                    update_counters(counters, 2)
 
             if current_state == 2 and type1_neighbors >= 2:
                 new_state[cell] = 1
                 update_counters(counters, 1)
-            elif current_state == 3 and type2_neighbors >= 2:
+            if current_state == 3 and type2_neighbors >= 2:
                 new_state[cell] = 2
                 update_counters(counters, 2)
-            elif current_state == 1 and type3_neighbors >= 2:
+            if current_state == 1 and type3_neighbors >= 2:
                 new_state[cell] = 3
                 update_counters(counters, 3)
 
-            # Survival of an active cell depends on the number of neighbors of the same type as the cell itself
             if current_state in [1, 2, 3]:
                 if neighbor_counts[current_state - 1] in [2, 3]:
                     new_state[cell] = current_state
@@ -103,6 +103,22 @@ def update_state(state, counters):
 
     state.clear()
     state.update(new_state)
+
+
+def precompute_edges(grid_radius):
+    edges = set()
+    grid_range = [-grid_radius, grid_radius]
+    for q in range(-grid_radius, grid_radius + 1):
+        for r in range(-grid_radius, grid_radius + 1):
+            if q in grid_range or r in grid_range or -q - r in grid_range:
+                edges.add((q, r))
+    return edges
+
+
+def clear_edges(state, edges):
+    for cell in edges:
+        if cell in state:
+            state[cell] = 0
 
 
 def borderline_cells(grid, state):
@@ -158,3 +174,9 @@ def check_for_death(state):
     counts = [sum(state.get(cell, 0) == t for cell in state) for t in [1, 2, 3]]
     dead_types = counts.count(0)
     return dead_types >= 2
+
+
+def color_neighborhood(state, cell):
+    neighborhood = gu.get_neighbors(cell)
+    for neighbor in neighborhood:
+        state[neighbor] = state[cell]
