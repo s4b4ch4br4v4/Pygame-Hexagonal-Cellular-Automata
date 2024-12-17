@@ -61,8 +61,6 @@ def update_state(state, counters):
             type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
             type3_neighbors = sum(state.get(neighbor, 0) == 3 for neighbor in neighbors)
 
-            neighborhood = type1_neighbors * type2_neighbors * type3_neighbors
-
             current_state = state[cell]
 
             neighbor_counts = [type1_neighbors, type2_neighbors, type3_neighbors]
@@ -83,15 +81,47 @@ def update_state(state, counters):
                     new_state[cell] = 3
                     update_counters(counters, 2)
 
-            if current_state == 2 and type1_neighbors >= 2:
+            if current_state == 2 and (type1_neighbors in [2, 3]):
                 new_state[cell] = 1
                 update_counters(counters, 1)
+            elif current_state == 2 and (type1_neighbors > 3):
+                new_state[cell] = 0
+            elif type2_neighbors in [2, 3]:
+                new_state[cell] = 2
+                update_counters(counters, 2)
+            else:
+                new_state[cell] = 0
+
+            if current_state == 3 and (type2_neighbors in [2, 3]):
+                new_state[cell] = 2
+                update_counters(counters, 2)
+            elif current_state == 3 and (type2_neighbors > 3):
+                new_state[cell] = 0
+            elif type3_neighbors in [2, 3]:
+                new_state[cell] = 3
+                update_counters(counters, 3)
+            else:
+                new_state[cell] = 0
+
+            if current_state == 1 and (type3_neighbors in [2, 3]):
+                new_state[cell] = 3
+                update_counters(counters, 1)
+            elif current_state == 1 and (type3_neighbors > 3):
+                new_state[cell] = 0
+            elif type1_neighbors in [2, 3]:
+                new_state[cell] = 1
+                update_counters(counters, 2)
+            else:
+                new_state[cell] = 0
+
+            '''
             if current_state == 3 and type2_neighbors >= 2:
                 new_state[cell] = 2
                 update_counters(counters, 2)
             if current_state == 1 and type3_neighbors >= 2:
                 new_state[cell] = 3
                 update_counters(counters, 3)
+            '''
 
             if current_state in [1, 2, 3]:
                 if neighbor_counts[current_state - 1] in [2, 3]:
@@ -176,7 +206,7 @@ def check_for_death(state):
     return dead_types >= 2
 
 
-def color_neighborhood(state, cell):
+def state_neighborhood(state, cell):
     neighborhood = gu.get_neighbors(cell)
     for neighbor in neighborhood:
         state[neighbor] = state[cell]

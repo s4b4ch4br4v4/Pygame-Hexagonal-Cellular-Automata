@@ -17,7 +17,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 font = pygame.font.SysFont('Arial', 24)
 
-
 # Simulation variables:
 
 CELL_RADIUS = 5
@@ -29,6 +28,7 @@ state = {cell: 0 for cell in grid}
 single_turn_mode = False
 show_borderline = False
 hex_click_mode = False
+highlighted_cell = None
 
 C = su.Counters()
 IW = su.InformationalWave()
@@ -41,7 +41,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-16_18-25-13.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-17_05-58-37.txt"
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -57,13 +57,13 @@ os.makedirs(screenshot_folder, exist_ok=True)
 
 with open(full_data_file_path, 'w') as data:
     data.write(
-        f"turn_count; "
-        f"active_cells_count; dead_cells_count; "
-        f"first_count; second_count; third_count; "
-        f"density; density1; density2; density3; "
-        f"borderline_cells_count; borderline_cyan; borderline_yellow; borderline_white; borderline_black; "
-        f"info_wave; blue_info_wave; red_info_wave; borderline_white; "
-        f"untouched_cells_count; \n")
+        f"turn_count;"
+        f"active_cells_count;dead_cells_count;"
+        f"first_count;second_count;third_count;"
+        f"density;density1;density2;density3;"
+        f"borderline_cells_count;borderline_cyan;borderline_yellow;borderline_white;borderline_black;"
+        f"info_wave;blue_info_wave;red_info_wave;borderline_white;"
+        f"untouched_cells_count;\n")
 
     running = True
     simulation_started = False
@@ -82,18 +82,27 @@ with open(full_data_file_path, 'w') as data:
                         if event.button == 1:
                             state[cell] = (state[cell] + 1) % 4
                         if event.button == 1 and hex_click_mode:
-                            su.color_neighborhood(state, cell)
+                            su.state_neighborhood(state, cell)
                         if event.button == 3:
                             if state[cell] == -1:
                                 state[cell] = 0
                             else:
                                 state[cell] = -1
+            elif event.type == pygame.MOUSEMOTION:
+                pos = pygame.mouse.get_pos()
+                for cell in grid:
+                    x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
+                    if m.dist(pos, (x, y)) < CELL_RADIUS:
+                        highlighted_cell = cell
+                        break
+                else:
+                    highlighted_cell = None
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     simulation_started = True
                     show_borderline = True
                 if event.key == pygame.K_p:
-                    single_turn_mode = True
+                    single_turn_mode = not single_turn_mode
                 if event.key == pygame.K_o:
                     hex_click_mode = not hex_click_mode
                 if event.key == pygame.K_h:
@@ -119,13 +128,13 @@ with open(full_data_file_path, 'w') as data:
         for cell in grid:
             x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
             state_value = state[cell]
-            color = su.colors.get(state_value, GC.GRAY)
+            color = su.colors.get(state[cell], GC.GRAY)
             if color == GC.GRAY:
                 neighbors = gu.get_neighbors(cell)
                 type1 = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
                 type2 = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
                 type3 = sum(state.get(neighbor, 0) == 3 for neighbor in neighbors)
-                color = (255/2 + 20 * type2, 255/2 + 20 * type3, 255/2 + 20 * type1)
+                color = (255 / 2 + 20 * type2, 255 / 2 + 20 * type3, 255 / 2 + 20 * type1)
                 if type1 != 0:
                     IW.blue_info_wave.append(cell)
                 if type2 != 0:
@@ -137,6 +146,12 @@ with open(full_data_file_path, 'w') as data:
             if state_value == 0 and cell not in IW.informational_wave_cells:
                 IW.untouched_cells.append(cell)
             gu.draw_hexagon(CELL_RADIUS, screen, color, (x, y))
+
+        if highlighted_cell:
+            highlight_color = su.colors.get(state[highlighted_cell])
+            darkened_color = tuple(max(0, int(c * 0.9)) for c in highlight_color)
+            x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *highlighted_cell)
+            gu.draw_hexagon(CELL_RADIUS, screen, darkened_color, (x, y))
 
         if show_borderline:
             su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
@@ -155,11 +170,10 @@ with open(full_data_file_path, 'w') as data:
             IW.informational_wave_cells.clear()
             IW.untouched_cells.clear()
 
-            if single_turn_mode:
-                single_turn_mode = False
-                simulation_started = False
-
             single_turn_mode = su.check_for_death(state)
+
+            if single_turn_mode:
+                simulation_started = False
 
             if C.turn_count % screenshot_interval == 0:
                 fsu.save_screenshot(screenshot_folder, C, current_date, screen)
@@ -174,23 +188,23 @@ with open(full_data_file_path, 'w') as data:
             density3 = C.third_count / len(grid)
 
             data.write(
-                f"{C.turn_count}; "
-                f"{C.active_cells_count}; {C.dead_cells_count}; "
-                f"{C.first_count}; {C.second_count}; {C.third_count}; "
-                f"{C.density}; {density1}; {density2}; {density3}; "
-                f"{len(su.borderline_cells(grid, state))}; "
-                f"{len(BC.cyan_borderline_cells)}; "
-                f"{len(BC.yellow_borderline_cells)}; "
-                f"{len(BC.white_borderline_cells)}; "
-                f"{len(BC.black_borderline_cells)}; "
-                f"{IW.info_wave_len[C.turn_count - 1]}; "
-                f"{len(IW.blue_info_wave)}; {len(IW.red_info_wave)}; {len(IW.white_info_wave)};"
-                f"{IW.untouched_cells_len[C.turn_count - 1]}; \n")
+                f"{C.turn_count};"
+                f"{C.active_cells_count};{C.dead_cells_count};"
+                f"{C.first_count};{C.second_count};{C.third_count};"
+                f"{C.density};{density1};{density2};{density3};"
+                f"{len(su.borderline_cells(grid, state))};"
+                f"{len(BC.cyan_borderline_cells)};"
+                f"{len(BC.yellow_borderline_cells)};"
+                f"{len(BC.white_borderline_cells)};"
+                f"{len(BC.black_borderline_cells)};"
+                f"{IW.info_wave_len[C.turn_count - 1]};"
+                f"{len(IW.blue_info_wave)};{len(IW.red_info_wave)};{len(IW.white_info_wave)};"
+                f"{IW.untouched_cells_len[C.turn_count - 1]};\n")
 
         info_text = (
             f"Turns: {C.turn_count}  |  "
             f"Active Cells: {C.active_cells_count}  -  "
-            f"{C.first_count}  -  {C.second_count}  -  {C.third_count}  |  "  
+            f"{C.first_count}  -  {C.second_count}  -  {C.third_count}  |  "
             f"Dead Cells: {C.dead_cells_count}  |  "
             f"Density: {C.density}  -  "
             f"  {C.first_count / len(grid)}  -  {C.second_count / len(grid)}  -  {C.third_count / len(grid)}")
