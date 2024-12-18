@@ -41,6 +41,15 @@ class BorderlineCells:
     black_borderline_cells: list = field(default_factory=list)
 
 
+survival = True
+
+type1_min, type1_max = 2, 3
+type2_min, type2_max = 2, 3
+type3_min, type3_max = 2, 3
+
+typeparams = [[type1_min, type1_max], [type2_min, type2_max], [type3_min, type3_max]]
+
+
 def update_counters(counters, cell_type):
     if cell_type == 1:
         counters.first_count += 1
@@ -60,46 +69,29 @@ def update_state(state, counters):
             type1_neighbors = sum(state.get(neighbor, 0) == 1 for neighbor in neighbors)
             type2_neighbors = sum(state.get(neighbor, 0) == 2 for neighbor in neighbors)
             type3_neighbors = sum(state.get(neighbor, 0) == 3 for neighbor in neighbors)
-
-            neighborhood = type1_neighbors * type2_neighbors * type3_neighbors
+            neighbor_counts = [type1_neighbors, type2_neighbors, type3_neighbors]
 
             current_state = state[cell]
 
-            neighbor_counts = [type1_neighbors, type2_neighbors, type3_neighbors]
+            if neighbor_counts[0] == neighbor_counts[1] == neighbor_counts[2]:
+                new_state[cell] = 0
 
-            if current_state == 0:
-                if type1_neighbors == type2_neighbors == type3_neighbors:
-                    new_state[cell] = 0
-
-                if (type1_neighbors > type3_neighbors) and (type1_neighbors in [2, 3]):
-                    new_state[cell] = 1
-                    update_counters(counters, 1)
-
-                if (type2_neighbors > type1_neighbors) and (type2_neighbors in [2, 3]):
-                    new_state[cell] = 2
-                    update_counters(counters, 2)
-
-                if (type3_neighbors > type2_neighbors) and (type3_neighbors in [2, 3]):
-                    new_state[cell] = 3
-                    update_counters(counters, 2)
-
-            if current_state == 2 and type1_neighbors >= 2:
+            if (neighbor_counts[0] > neighbor_counts[2]) and (neighbor_counts[0] in typeparams[0]):
                 new_state[cell] = 1
-                update_counters(counters, 1)
-            if current_state == 3 and type2_neighbors >= 2:
-                new_state[cell] = 2
-                update_counters(counters, 2)
-            if current_state == 1 and type3_neighbors >= 2:
-                new_state[cell] = 3
-                update_counters(counters, 3)
 
-            if current_state in [1, 2, 3]:
-                if neighbor_counts[current_state - 1] in [2, 3]:
+            if (neighbor_counts[1] > neighbor_counts[0]) and (neighbor_counts[1] in typeparams[1]):
+                new_state[cell] = 2
+
+            if (neighbor_counts[2] > neighbor_counts[1]) and (neighbor_counts[2] in typeparams[2]):
+                new_state[cell] = 3
+
+            if current_state in [1, 2, 3] and survival:
+                if neighbor_counts[current_state - 1] in typeparams[current_state - 1]:
                     new_state[cell] = current_state
-                    update_counters(counters, current_state)
                 else:
                     new_state[cell] = 0
-                    update_counters(counters, current_state)
+
+            update_counters(counters, new_state[cell])
 
     state.clear()
     state.update(new_state)
@@ -176,7 +168,7 @@ def check_for_death(state):
     return dead_types >= 2
 
 
-def color_neighborhood(state, cell):
+def state_neighborhood(state, cell):
     neighborhood = gu.get_neighbors(cell)
     for neighbor in neighborhood:
         state[neighbor] = state[cell]
