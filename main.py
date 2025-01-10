@@ -32,8 +32,8 @@ font = pygame.font.SysFont('Arial', 24)
 
 # Simulation variables:
 
-CELL_RADIUS = 20
-radius = 12
+CELL_RADIUS = 5
+radius = 30
 
 grid = gu.generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
@@ -42,6 +42,7 @@ single_turn_mode = False
 show_borderline = False
 hex_click_mode = False
 highlighted_cell = None
+initial_counts = None
 
 C = su.Counters()
 IW = su.InformationalWave()
@@ -54,7 +55,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-17_05-58-37.txt"
+LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-23_18-00-31.txt"
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -75,7 +76,7 @@ with open(full_data_file_path, 'w') as data:
         f"first_count;second_count;third_count;"
         f"density;density1;density2;density3;"
         f"borderline_cells_count;borderline_cyan;borderline_yellow;borderline_white;borderline_black;"
-        f"info_wave;blue_info_wave;red_info_wave;borderline_white;"
+        f"info_wave;blue_info_wave;red_info_wave;green_info_wave;"
         f"untouched_cells_count;\n")
 
     running = True
@@ -112,13 +113,15 @@ with open(full_data_file_path, 'w') as data:
                     highlighted_cell = None
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    simulation_started = True
+                    simulation_started = not simulation_started
                     show_borderline = True
+                    if initial_counts is None:
+                        initial_counts = su.analyze_grid(state)
                 if event.key == pygame.K_p:
                     single_turn_mode = not single_turn_mode
                 if event.key == pygame.K_o:
                     hex_click_mode = not hex_click_mode
-                if event.key == pygame.K_s:
+                if event.key == pygame.K_d:
                     su.survival = not su.survival
                 if event.key == pygame.K_h:
                     show_borderline = not show_borderline
@@ -129,6 +132,8 @@ with open(full_data_file_path, 'w') as data:
                     next_record_turn = 0
                 if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
                     fsu.save_configuration(SAVE_PATH, current_date, state)
+                if event.key == pygame.K_g:
+                    su.generate_rand_config(grid, state, radius-15)
                 if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
                     fsu.load_configuration(LOAD_PATH, state)
                 if event.key == pygame.K_ESCAPE:
@@ -151,15 +156,15 @@ with open(full_data_file_path, 'w') as data:
                 type3 = sum(state.get(neighbor, 0) == 3 for neighbor in neighbors)
                 color = (255 / 2 + 20 * type2, 255 / 2 + 20 * type3, 255 / 2 + 20 * type1)
                 if type1 != 0:
-                    IW.blue_info_wave.append(cell)
+                    IW.blue_info_wave.add(cell)
                 if type2 != 0:
-                    IW.red_info_wave.append(cell)
+                    IW.red_info_wave.add(cell)
                 if type3 != 0:
-                    IW.white_info_wave.append(cell)
+                    IW.white_info_wave.add(cell)
                 if type1 != 0 or type2 != 0 or type3 != 0:
-                    IW.informational_wave_cells.append(cell)
+                    IW.informational_wave_cells.add(cell)
             if state_value == 0 and cell not in IW.informational_wave_cells:
-                IW.untouched_cells.append(cell)
+                IW.untouched_cells.add(cell)
             gu.draw_hexagon(CELL_RADIUS, screen, color, (x, y))
 
         if highlighted_cell:
@@ -171,7 +176,8 @@ with open(full_data_file_path, 'w') as data:
         if show_borderline:
             su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
 
-        if simulation_started or single_turn_mode:
+        if simulation_started:
+            simulation_started = su.check_for_death(initial_counts, state)
             C.first_count = 0
             C.second_count = 0
             C.third_count = 0
@@ -184,8 +190,6 @@ with open(full_data_file_path, 'w') as data:
 
             IW.informational_wave_cells.clear()
             IW.untouched_cells.clear()
-
-            single_turn_mode = su.check_for_death(state)
 
             if single_turn_mode:
                 simulation_started = False

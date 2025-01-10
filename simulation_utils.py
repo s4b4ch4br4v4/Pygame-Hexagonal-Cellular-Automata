@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 import grid_utils as gu
+import random
 
 colors = {
     -1: gu.Grid_Colors.DARK_GRAY,
@@ -24,11 +25,11 @@ class Counters:
 
 @dataclass
 class InformationalWave:
-    informational_wave_cells: list = field(default_factory=list)
-    blue_info_wave: list = field(default_factory=list)
-    red_info_wave: list = field(default_factory=list)
-    white_info_wave: list = field(default_factory=list)
-    untouched_cells: list = field(default_factory=list)
+    informational_wave_cells: set = field(default_factory=set)
+    blue_info_wave: set = field(default_factory=set)
+    red_info_wave: set = field(default_factory=set)
+    white_info_wave: set = field(default_factory=set)
+    untouched_cells: set = field(default_factory=set)
     info_wave_len: list = field(default_factory=list)
     untouched_cells_len: list = field(default_factory=list)
 
@@ -108,6 +109,7 @@ def precompute_edges(grid_radius):
 
 
 def clear_edges(state, edges):
+    print(len(edges))
     for cell in edges:
         if cell in state:
             state[cell] = 0
@@ -162,13 +164,45 @@ def update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
             gu.draw_hexagon(CELL_RADIUS, screen, gu.Grid_Colors.BLACK, (q, r))
 
 
-def check_for_death(state):
-    counts = [sum(state.get(cell, 0) == t for cell in state) for t in [1, 2, 3]]
-    dead_types = counts.count(0)
-    return dead_types >= 2
+def analyze_grid(state):
+    counts = {1: 0, 2: 0, 3: 0}
+    for cell_state in state.values():
+        if cell_state in counts:
+            counts[cell_state] += 1
+    return counts
+
+
+def check_for_death(initial_counts, state):
+    initial_state = sum(1 for count in initial_counts.values() if count > 0)
+    current_state = sum(1 for count in analyze_grid(state).values() if count > 0)
+    if initial_state > 1:
+        if current_state < initial_state:
+            return False
+        else:
+            return True
+    elif initial_state == 1:
+        if current_state < initial_state:
+            return False
+        else:
+            return True
 
 
 def state_neighborhood(state, cell):
     neighborhood = gu.get_neighbors(cell)
     for neighbor in neighborhood:
         state[neighbor] = state[cell]
+
+
+def remove_cells(grid, cells_to_remove):
+    return [cell for cell in grid if cell not in cells_to_remove]
+
+
+def generate_rand_config(grid, state, grid_radius):
+    edges = precompute_edges(grid_radius)
+    edgeless_grid = remove_cells(grid, edges)
+    central_cells = random.sample(edgeless_grid, 3)
+
+    states = [1, 2, 3]
+    for i, cell in enumerate(central_cells):
+        state[cell] = states[i]
+        state_neighborhood(state, cell)
