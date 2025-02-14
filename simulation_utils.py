@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from dataclasses import field
 import grid_utils as gu
 import random
+from collections import Counter
 
 colors = {
     -1: gu.Grid_Colors.DARK_GRAY,
@@ -98,6 +99,31 @@ def update_state(state, counters):
     state.update(new_state)
 
 
+def update_state2(state, counters, rules, threshold):
+    new_state = dict()
+    for cell, cell_state in state.items():
+        if cell_state != -1:
+            nbrs = gu.get_neighbors(cell)
+            print(nbrs)
+            nbrs_states = [state[nbr] for nbr in nbrs if nbr in state]
+            print(nbrs_states)
+
+            counts = Counter({b: nbrs_states.count(b) for b in rules[cell_state]})
+            print(counts)
+
+            if counts:
+                nbr_state, count = counts.most_common(1)[0]
+
+                if count in threshold:
+                    new_state[cell] = nbr_state
+                else:
+                    new_state[cell] = cell_state
+
+                update_counters(counters, new_state[cell])
+    state.clear()
+    state.update(new_state)
+
+
 def precompute_edges(grid_radius):
     edges = set()
     grid_range = [-grid_radius, grid_radius]
@@ -109,7 +135,6 @@ def precompute_edges(grid_radius):
 
 
 def clear_edges(state, edges):
-    print(len(edges))
     for cell in edges:
         if cell in state:
             state[cell] = 0
