@@ -6,6 +6,7 @@ import datetime
 import simulation_utils as su
 import grid_utils as gu
 import file_system_utils as fsu
+import file_system_gui as fsg
 
 """
 შეტყობინება ბატონი გრიგოლისთვის:
@@ -24,15 +25,19 @@ import file_system_utils as fsu
 
 # PyGame base variables:
 
-WIDTH, HEIGHT = 1800, 1400
+WIDTH, HEIGHT = 1700, 900
 FPS = 30
 
 pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+pygame.display.set_caption("Hexagonal Grid Simulation")  # Sets the window title
 clock = pygame.time.Clock()
 font = pygame.font.SysFont('Arial', 24)
 
 # Simulation variables:
+
+rules = {0: [1, 2, 3], 1: [3], 2: [1], 3: [2]}
+threshold = [1, 2]
 
 CELL_RADIUS = 5
 radius = 30
@@ -57,7 +62,7 @@ GC = gu.Grid_Colors
 current_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 SAVE_PATH = "data_of_initial_configurations"
-LOAD_PATH = "data_of_initial_configurations/initial_configuration_2024-12-23_18-00-31.txt"
+LOAD_PATH = ""
 
 data_folder_path = "data_of_grids"
 screenshot_folder = "grid_screenshots"
@@ -93,7 +98,7 @@ with open(full_data_file_path, 'w') as data:
             elif event.type == pygame.MOUSEBUTTONDOWN and not simulation_started:
                 pos = pygame.mouse.get_pos()
                 for cell in grid:
-                    x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
+                    x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         if event.button == 1:
                             state[cell] = (state[cell] + 1) % 4
@@ -107,7 +112,7 @@ with open(full_data_file_path, 'w') as data:
             elif event.type == pygame.MOUSEMOTION:
                 pos = pygame.mouse.get_pos()
                 for cell in grid:
-                    x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
+                    x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         highlighted_cell = cell
                         break
@@ -134,10 +139,13 @@ with open(full_data_file_path, 'w') as data:
                     next_record_turn = 0
                 if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
                     fsu.save_configuration(SAVE_PATH, current_date, state)
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
                 if event.key == pygame.K_g:
                     su.generate_rand_config(grid, state, radius-15)
                 if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                    fsu.load_configuration(LOAD_PATH, state)
+                    selected_file = fsg.select_file(SAVE_PATH)
+                    if selected_file:
+                        fsu.load_configuration(selected_file, state)
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
@@ -148,7 +156,7 @@ with open(full_data_file_path, 'w') as data:
         IW.white_info_wave.clear()
 
         for cell in grid:
-            x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
+            x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
             state_value = state[cell]
             color = su.colors.get(state[cell], GC.GRAY)
             if color == GC.GRAY:
@@ -172,7 +180,7 @@ with open(full_data_file_path, 'w') as data:
         if highlighted_cell:
             highlight_color = su.colors.get(state[highlighted_cell])
             darkened_color = tuple(max(0, int(c * 0.9)) for c in highlight_color)
-            x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *highlighted_cell)
+            x, y = gu.hex_to_pixel(CELL_RADIUS, *highlighted_cell)
             gu.draw_hexagon(CELL_RADIUS, screen, darkened_color, (x, y))
 
         if show_borderline:
@@ -183,8 +191,8 @@ with open(full_data_file_path, 'w') as data:
             C.first_count = 0
             C.second_count = 0
             C.third_count = 0
-            su.update_state(state, C)
-            # su.update_state2(state, C, {0: [], 1: [2], 2: [3], 3: [1]}, [2, 3])
+            # su.update_state(state, C)
+            su.update_state2(state, C, rules, threshold)
             su.clear_edges(state, su.precompute_edges(radius))
             C.turn_count += 1
 
@@ -239,8 +247,8 @@ with open(full_data_file_path, 'w') as data:
 
         text_width1, text_height1 = info_surface1.get_size()
 
-        screen.blit(info_surface1, ((WIDTH - text_width1) // 10, (HEIGHT - text_height1) // 6))
-        screen.blit(info_surface2, ((WIDTH - text_width1) // 10, (HEIGHT - text_height1) // 6 + text_height1 + 5))
+        screen.blit(info_surface1, (10, 10))  # Place the first info text at (10, 10)
+        screen.blit(info_surface2, (10, 40))  # Place the second info text slightly below the first
 
         pygame.display.flip()
         clock.tick(FPS)

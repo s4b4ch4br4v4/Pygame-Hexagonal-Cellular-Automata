@@ -104,12 +104,9 @@ def update_state2(state, counters, rules, threshold):
     for cell, cell_state in state.items():
         if cell_state != -1:
             nbrs = gu.get_neighbors(cell)
-            print(nbrs)
             nbrs_states = [state[nbr] for nbr in nbrs if nbr in state]
-            print(nbrs_states)
 
             counts = Counter({b: nbrs_states.count(b) for b in rules[cell_state]})
-            print(counts)
 
             if counts:
                 nbr_state, count = counts.most_common(1)[0]
