@@ -46,12 +46,12 @@ def select_file(directory):
                 elif event.y < 0:
                     scroll_y = min((len(files) - 1) * 40 - HEIGHT, scroll_y + scroll_speed)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = event.pos
-                for i, file in enumerate(files):
-                    if 10 + i * 40 - scroll_y < y < 40 + i * 40 - scroll_y:
-                        selected_file = file
-                        running = False
-
+                if event.button == 1:  # Left mouse button only
+                    x, y = event.pos
+                    for i, file in enumerate(files):
+                        if 10 + i * 40 - scroll_y < y < 40 + i * 40 - scroll_y:
+                            selected_file = file
+                            running = False
         display_files()
         pygame.display.flip()
 
