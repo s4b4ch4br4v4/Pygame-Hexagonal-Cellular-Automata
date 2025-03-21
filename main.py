@@ -17,8 +17,7 @@ import file_system_gui as fsg
     CTRL + s - მიმდინარე კონფიგურაციის დამახსოვრება(იმახსოვრებს კონფიგურაციას ტექსტურ ფაილში)
     CTRL + l - დამახსოვრებული კონფიგურაციის მითითების შემდეგ(LOAD_PATH) მისი ატვირთვის საშუალებას გვაძლევს
     h - ამ ღილაკით შეიძლება დამალო/გამოაჩინო ეგ შავი საზღვარი
-    s - დააჭირეთ რომ უჯრების გადარჩენა აკონტროლოთ
-    o - უჯრედებისაგან ეექვსკუთხედების ხატვა(hex_click_mode)
+    o - უჯრედებისაგან ექვსკუთხედების ხატვა(hex_click_mode)
     g - გენერაცია შემთხვევით ადგილას ყველა ტიპის უჯრისაგან ექვსკუთხედის
     d - უჯრების გადარჩენის ჩართვა/გათიშვა(მარჯვენა ზედა კუთხეში ინდიკატორიც კი არის)
 """
@@ -39,8 +38,8 @@ font = pygame.font.SysFont('Arial', 24)
 rules = {0: [1, 2, 3], 1: [3], 2: [1], 3: [2]}
 threshold = [1, 2]
 
-CELL_RADIUS = 5
-radius = 30
+CELL_RADIUS = 10
+radius = 20
 
 grid = gu.generate_hex_grid(radius)
 state = {cell: 0 for cell in grid}
@@ -143,6 +142,10 @@ with open(full_data_file_path, 'w') as data:
                 if event.key == pygame.K_g:
                     su.generate_rand_config(grid, state, radius-15)
                 if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    simulation_started = False
+                    state = {cell: 0 for cell in grid}
+                    C.turn_count = 0
+                    next_record_turn = 0
                     selected_file = fsg.select_file(SAVE_PATH)
                     if selected_file:
                         fsu.load_configuration(selected_file, state)
