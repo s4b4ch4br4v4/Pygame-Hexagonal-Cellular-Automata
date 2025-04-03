@@ -12,14 +12,14 @@ import file_system_gui as fsg
 შეტყობინება ბატონი გრიგოლისთვის:
     RMB, LMB - უჯრისა და კედლის დასმა
     SPACE - სიმულაციის დაწყება
-    r - სიბრტყის გასუფთავება(არესტარდებს სიმულაციას)
-    p - single_turn_mode-ის ჩართვა(ბიჯი-ბიჯი, ასევე ვიყენებთ ამას როგორც პაუზას)
-    CTRL + s - მიმდინარე კონფიგურაციის დამახსოვრება(იმახსოვრებს კონფიგურაციას ტექსტურ ფაილში)
-    CTRL + l - დამახსოვრებული კონფიგურაციის მითითების შემდეგ(LOAD_PATH) მისი ატვირთვის საშუალებას გვაძლევს
-    h - ამ ღილაკით შეიძლება დამალო/გამოაჩინო ეგ შავი საზღვარი
-    o - უჯრედებისაგან ექვსკუთხედების ხატვა(hex_click_mode)
-    g - გენერაცია შემთხვევით ადგილას ყველა ტიპის უჯრისაგან ექვსკუთხედის
-    d - უჯრების გადარჩენის ჩართვა/გათიშვა(მარჯვენა ზედა კუთხეში ინდიკატორიც კი არის)
+    R - სიბრტყის გასუფთავება(არესტარდებს სიმულაციას)
+    P - single_turn_mode-ის ჩართვა(ბიჯი-ბიჯი, ასევე ვიყენებთ ამას როგორც პაუზას)
+    CTRL + S - მიმდინარე კონფიგურაციის დამახსოვრება(იმახსოვრებს კონფიგურაციას ტექსტურ ფაილში)
+    CTRL + L - დამახსოვრებული კონფიგურაციის მითითების შემდეგ(LOAD_PATH) მისი ატვირთვის საშუალებას გვაძლევს
+    H - ამ ღილაკით შეიძლება დამალო/გამოაჩინო ეგ შავი საზღვარი
+    O - უჯრედებისაგან ექვსკუთხედების ხატვა(hex_click_mode)
+    G - გენერაცია შემთხვევით ადგილას ყველა ტიპის უჯრისაგან ექვსკუთხედის
+    D - უჯრების გადარჩენის ჩართვა/გათიშვა(მარჯვენა ზედა კუთხეში ინდიკატორიც კი არის)
     
     !!! უჯრების გადარჩენის კონტროლი აქტუალურია როცა სიმულაცია მუშაობს ჩვენი სისტემით !!!
     !!! რადგან მათ სისტემაში არ არის გათვალისწინებული უჯრების თავისით სიკვდილიანობა !!!
@@ -57,8 +57,8 @@ rules = {0: [1, 2, 3], 1: [3], 2: [1], 3: [2]}
     მაგალითად: 1 ტიპის უჯრა რომ შეჭამოს 3 ტიპის უჯრამ(რადგან, ვიცით 1: [3])
     1 ტიპის უჯრის ირგვლივ 3 ტიპის უჯრების რაოდენობა უნდა იყოს მოცემულ სეგმენტში [2, 4].
 """
-threshold = [2, 5]
-
+threshold = [2, 3]
+# threshold = {0: [1, 2, 3], 1: [3], 2: [1], 3: [2,5]}
 CELL_RADIUS = 10
 radius = 20
 
@@ -118,7 +118,7 @@ with open(full_data_file_path, 'w') as data:
             elif event.type == pygame.MOUSEBUTTONDOWN and not simulation_started:
                 pos = pygame.mouse.get_pos()
                 for cell in grid:
-                    x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
+                    x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         if event.button == 1:
                             state[cell] = (state[cell] + 1) % 4
@@ -132,7 +132,7 @@ with open(full_data_file_path, 'w') as data:
             elif event.type == pygame.MOUSEMOTION:
                 pos = pygame.mouse.get_pos()
                 for cell in grid:
-                    x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
+                    x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
                     if m.dist(pos, (x, y)) < CELL_RADIUS:
                         highlighted_cell = cell
                         break
@@ -180,7 +180,7 @@ with open(full_data_file_path, 'w') as data:
         IW.white_info_wave.clear()
 
         for cell in grid:
-            x, y = gu.hex_to_pixel(CELL_RADIUS, *cell)
+            x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *cell)
             state_value = state[cell]
             color = su.colors.get(state[cell], GC.GRAY)
             if color == GC.GRAY:
@@ -204,25 +204,25 @@ with open(full_data_file_path, 'w') as data:
         if highlighted_cell:
             highlight_color = su.colors.get(state[highlighted_cell])
             darkened_color = tuple(max(0, int(c * 0.9)) for c in highlight_color)
-            x, y = gu.hex_to_pixel(CELL_RADIUS, *highlighted_cell)
+            x, y = gu.hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, *highlighted_cell)
             gu.draw_hexagon(CELL_RADIUS, screen, darkened_color, (x, y))
 
-        if show_borderline:
-            su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
 
         if simulation_started:
             simulation_started = su.check_for_death(initial_counts, state)
             C.first_count = 0
             C.second_count = 0
             C.third_count = 0
+
             """
                 update_state - ჩვენი უჯრების მდგომარეობის განახლების სისტემა 
                 update_state2 - მათი
                 
                 !!! მხოლოდ ერთი უნდა მუშაობდეს !!!
             """
-            # su.update_state(state, C)
-            su.update_state2(state, C, rules, threshold)
+
+            su.update_state(state, C)
+            # su.update_state2(state, C, rules, threshold)
 
             su.clear_edges(state, su.precompute_edges(radius))
             C.turn_count += 1
@@ -281,6 +281,8 @@ with open(full_data_file_path, 'w') as data:
         screen.blit(info_surface1, (10, 10))  # Place the first info text at (10, 10)
         screen.blit(info_surface2, (10, 40))  # Place the second info text slightly below the first
 
+        if show_borderline:
+            su.update_borderline_color(grid, state, BC, screen, CELL_RADIUS, WIDTH, HEIGHT)
         pygame.display.flip()
         clock.tick(FPS)
 

@@ -78,14 +78,14 @@ def update_state(state, counters):
             if neighbor_counts[0] == neighbor_counts[1] == neighbor_counts[2]:
                 new_state[cell] = 0
 
-            if (neighbor_counts[0] > neighbor_counts[2]) and (neighbor_counts[0] in typeparams[0]):
-                new_state[cell] = 1
-
             if (neighbor_counts[1] > neighbor_counts[0]) and (neighbor_counts[1] in typeparams[1]):
                 new_state[cell] = 2
 
             if (neighbor_counts[2] > neighbor_counts[1]) and (neighbor_counts[2] in typeparams[2]):
                 new_state[cell] = 3
+
+            if (neighbor_counts[0] > neighbor_counts[2]) and (neighbor_counts[0] in typeparams[0]):
+                new_state[cell] = 1
 
             if current_state in [1, 2, 3] and survival:
                 if neighbor_counts[current_state - 1] in typeparams[current_state - 1]:

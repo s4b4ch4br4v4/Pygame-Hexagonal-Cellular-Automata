@@ -26,10 +26,10 @@ def generate_hex_grid(radius):
     return grid
 
 
-def hex_to_pixel(CELL_RADIUS, q, r, offset_x=850, offset_y=500):
-    x = CELL_RADIUS * (3 / 2 * q) + offset_x
-    y = CELL_RADIUS * (m.sqrt(3) * (r + q / 2)) + offset_y
-    return int(x), int(y)
+def hex_to_pixel(CELL_RADIUS, WIDTH, HEIGHT, q, r):
+    x = CELL_RADIUS * (3 / 2 * q)
+    y = CELL_RADIUS * (m.sqrt(3) * (r + q / 2))
+    return int(x + WIDTH // 2), int(y + HEIGHT // 2)
 
 
 def draw_hexagon(CELL_RADIUS, surface, color, pos):
@@ -41,7 +41,7 @@ def draw_hexagon(CELL_RADIUS, surface, color, pos):
         point_y = y + CELL_RADIUS * m.sin(angle)
         points.append((point_x, point_y))
     pygame.draw.polygon(surface, color, points)
-    # pygame.draw.polygon(surface, GRAY, points, 1)
+    # pygame.draw.polygon(surface, Grid_Colors.GRAY, points, 1)
 
 
 def get_neighbors(cell):
